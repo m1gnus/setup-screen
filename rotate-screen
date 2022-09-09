@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -e
+
+op="$1"
+direction="$2"
+    
+case "$op" in
+video)
+    echo "$direction" > /etc/screen-rotation
+    /etc/setup-screens.sh
+    ;;
+touch)
+    case "$direction" in
+    normal)
+        matrix='1 0 0 0 1 0 0 0 1'
+        ;;
+    left)
+        matrix='0 -1 1 1 0 0 0 0 1'
+        ;;
+    inverted)
+        matrix='-1 0 1 0 -1 1 0 0 1'
+        ;;
+    right)
+        matrix='0 1 0 -1 0 1 0 0 1'
+        ;;
+    esac
+
+    cat > /etc/udev/rules.d/90-calibrate-touchscreens.rules <<EOF 
+ACTION=="add",    SUBSYSTEMS=="hid", DRIVERS=="hid-multitouch", ENV{LIBINPUT_CALIBRATION_MATRIX}="$matrix"
+ACTION=="change", SUBSYSTEMS=="hid", DRIVERS=="hid-multitouch", ENV{LIBINPUT_CALIBRATION_MATRIX}="$matrix"
+EOF
+
+    udevadm control --reload-rules
+    udevadm trigger -c change
+    ;;
+esac
